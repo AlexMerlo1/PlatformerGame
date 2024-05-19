@@ -8,8 +8,7 @@ SCREEN_HEIGHT = int(SCREEN_WIDTH * .8)
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Platformer")
 
-scale = .5
-
+scale = .4
 # Create class that will be used for the player and enemies
 class combatant(pygame.sprite.Sprite):
   def __init__(self, x, y, scale):
@@ -18,7 +17,9 @@ class combatant(pygame.sprite.Sprite):
     self.image = pygame.transform.scale(img, (int(img.get_width() * scale), int(img.get_height() * scale)))
     self.rect = self.image.get_rect()
     self.rect.center = (x, y)
-    self.moveSpeed = 1
+    self.speed = 1
+    self.gravity = 3
+    self.isJumping = False
 
     self.orientationLeft = self.image
     self.orientationRight = pygame.transform.flip(self.image, True, False)
@@ -29,52 +30,66 @@ class combatant(pygame.sprite.Sprite):
   def move(self, direction):
     if direction == 'left':
       self.image = self.orientationLeft
-    elif direction == 'right':
+      self.rect.x -= self.speed
+    if direction == 'right':
       self.image = self.orientationRight
+      self.rect.x += self.speed
+    
 
 
   def attack(self):
     pass # filler text
 
+class platform(pygame.sprite.Sprite):
+  def __init__(self, x, y, scale):
+    img = pygame.image.load('imgs/world/ground.png')
+    self.image = pygame.transform.scale(img, (int(img.get_width() * scale), int(img.get_height() * scale)))
+    self.rect = self.image.get_rect()
+    self.rect.center = (x, y)
+  def draw(self):
+    screen.blit(self.image, self.rect)
 
-class world:
-  def __init__(self):
-    pass # filler text
 
 def draw_background():
+  # Draw the background image onto the screen
   background = pygame.image.load('imgs/world/background.jpg')
   background = pygame.transform.scale(background, (SCREEN_WIDTH, SCREEN_HEIGHT))
-  
-  # Draw the background image onto the screen
   screen.blit(background, (0, 0))
 
+  # Create a line and draw on screen
+  lineColor = (255, 0, 0)
+  ground_line = pygame.draw.line(screen, lineColor, (0, SCREEN_HEIGHT * 0.95), (SCREEN_WIDTH, SCREEN_HEIGHT * 0.95))
+  # Update the display
+
+
 # Create the main player of the game
-player = combatant(200,200,scale)
+player = combatant(200,(SCREEN_HEIGHT * 0.89),scale)
+
 
 
 # Main game loop
 running = True
 while running:
-  draw_background()
   for event in pygame.event.get():
     # Close game when exit button is pressed
     if event.type == pygame.QUIT:
       running = False
     
+  draw_background()
+  
   # Check for key presses
   keys = pygame.key.get_pressed()
 
   if keys[pygame.K_LEFT]:
       player.move('left')
-  elif keys[pygame.K_RIGHT]:
+  if keys[pygame.K_RIGHT]:
       player.move('right')
-  elif keys[pygame.K_UP]:
+  if keys[pygame.K_UP]:
       player.move('jump')
-  elif keys[pygame.K_SPACE]:
+  if keys[pygame.K_SPACE]:
       player.attack()
-    
   player.draw()
-  
+
   pygame.display.update()
 
 
