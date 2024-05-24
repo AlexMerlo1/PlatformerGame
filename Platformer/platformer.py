@@ -30,7 +30,7 @@ class Combatant(pygame.sprite.Sprite):
         self.jumpsLeft = 2
         self.maxJumps = 2
 
-        self.fixedRightPosition = screenWidth * 0.4  # Player position fixed at 20% of the screen width from the left
+        self.fixedRightPosition = screenWidth * 0.4  # Player position fixed at 40% of the screen width from the left
         self.orientationLeft = self.image
         self.orientationRight = pygame.transform.flip(self.image, True, False)
 
