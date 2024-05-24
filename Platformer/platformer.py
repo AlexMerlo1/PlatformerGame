@@ -18,8 +18,8 @@ class Combatant(pygame.sprite.Sprite):
     self.rect = self.image.get_rect()
     self.rect.center = (x, y)
     self.speed = 5
-    self.jump_speed = 15
-    self.gravity = 0.5
+    self.jump_speed = 10
+    self.gravity = 0.3
     self.vel_y = 0
     self.jumps_left = 2
     self.max_jumps = 2
