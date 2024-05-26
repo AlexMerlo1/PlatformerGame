@@ -23,15 +23,15 @@ class Combatant(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(img, (int(img.get_width() * scale), int(img.get_height() * scale)))
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
-        self.speed = 5
+        self.speed = 6
         self.jumpSpeed = 20
         self.gravity = 1.7
         self.velY = 0
         self.jumpsLeft = 2
         self.maxJumps = 2
 
-        self.fixedLeftPosition = screenWidth * 0.3  # Player position fixed at 40% of the screen width from the left
-        self.fixedRightPosition = screenWidth * 0.5  # Player position fixed at 40% of the screen width from the left
+        self.fixedLeftPosition = screenWidth * 0.425
+        self.fixedRightPosition = screenWidth * 0.425
         self.orientationLeft = self.image
         self.orientationRight = pygame.transform.flip(self.image, True, False)
 
@@ -112,7 +112,7 @@ class Platform(pygame.sprite.Sprite):
 scroll = 0
 
 # Create the main player
-player = Combatant(int(screenWidth * .4), screenHeight * 0.89, scale)
+player = Combatant(int(screenWidth * .47), screenHeight * 0.89, scale)
 
 # Create the platforms
 platforms = [
