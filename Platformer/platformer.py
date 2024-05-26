@@ -30,18 +30,22 @@ class Combatant(pygame.sprite.Sprite):
         self.jumpsLeft = 2
         self.maxJumps = 2
 
-        self.fixedRightPosition = screenWidth * 0.4  # Player position fixed at 40% of the screen width from the left
+        self.fixedLeftPosition = screenWidth * 0.3  # Player position fixed at 40% of the screen width from the left
+        self.fixedRightPosition = screenWidth * 0.5  # Player position fixed at 40% of the screen width from the left
         self.orientationLeft = self.image
         self.orientationRight = pygame.transform.flip(self.image, True, False)
 
     def draw(self):
         # Blit the current image to the screen at the current position
         screen.blit(self.image, self.rect.topleft)
+        pygame.draw.rect(screen, (255, 0, 0), self.rect, 2)
+
 
     def move(self, direction):
-        if direction == 'left' and self.rect.left > 0:  # Check to make sure the player does not go off the left side
+        if direction == 'left':  # Check to make sure the player does not go off the left side
             self.image = self.orientationLeft
-            self.rect.x -= self.speed
+            if self.rect.x > self.fixedLeftPosition:
+                self.rect.x -= self.speed
             return -self.speed  # Scroll background right
         elif direction == 'right':
             self.image = self.orientationRight
@@ -66,6 +70,17 @@ class Combatant(pygame.sprite.Sprite):
         if self.rect.bottom > screenHeight * 0.95:
             self.rect.bottom = screenHeight * 0.95
             self.jumpsLeft = self.maxJumps  # Reset jump counter when on ground
+        for platform in platforms:
+            if platform.rect.colliderect(self.rect):
+                if self.velY > 0:  # Falling down
+                    if self.rect.bottom <= platform.rect.bottom:
+                        self.rect.bottom = platform.rect.top
+                        self.velY = 0
+                        self.jumpsLeft = self.maxJumps
+                elif self.velY < 0:  # Moving up
+                    if self.rect.top >= platform.rect.top:
+                        self.rect.top = platform.rect.bottom
+                        self.velY = 0
 
     def attack(self):
         pass  # Filler for attack logic
@@ -79,9 +94,32 @@ def drawBackground(scroll):
         screen.blit(background, (relX, 0))
 
 
-scroll = 0
-player = Combatant(200, screenHeight * 0.89, scale)
+class Platform(pygame.sprite.Sprite):
+    def __init__(self, x, y, width, height):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load('imgs/world/platform.png').convert_alpha()
+        self.image = pygame.transform.scale(self.image, (width, height)) 
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (x, y)
+        self.fixed_x = x  
 
+    def draw(self):
+        self.rect.x = self.fixed_x + scroll
+        screen.blit(self.image, self.rect.topleft)
+        pygame.draw.rect(screen, (255, 0, 0), self.rect, 2)
+        
+
+scroll = 0
+
+# Create the main player
+player = Combatant(int(screenWidth * .4), screenHeight * 0.89, scale)
+
+# Create the platforms
+platforms = [
+    Platform(200, 500, 200, 20),
+    Platform(400, 500, 100, 20),
+    Platform(600, 400, 100, 20)
+]
 running = True
 while running:
     clock.tick(50)
@@ -106,6 +144,9 @@ while running:
 
     player.update()
     player.draw()
+
+    for platform in platforms:
+        platform.draw()
     pygame.display.update()
 
 pygame.quit()
