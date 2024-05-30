@@ -14,6 +14,9 @@ background = pygame.transform.scale(background, (screenWidth, screenHeight))
 backgroundWidth = background.get_width()
 
 scale = 0.4
+ground_height = 50
+
+
 
 
 class Combatant(pygame.sprite.Sprite):
@@ -67,9 +70,6 @@ class Combatant(pygame.sprite.Sprite):
         self.rect.y += self.velY
 
         # Check if on ground
-        if self.rect.bottom > screenHeight * 0.95:
-            self.rect.bottom = screenHeight * 0.95
-            self.jumpsLeft = self.maxJumps  # Reset jump counter when on ground
         for platform in platforms:
             if platform.rect.colliderect(self.rect):
                 if self.velY > 0:  # Falling down
@@ -78,9 +78,26 @@ class Combatant(pygame.sprite.Sprite):
                         self.velY = 0
                         self.jumpsLeft = self.maxJumps
                 elif self.velY < 0:  # Moving up
-                    if self.rect.top >= platform.rect.top:
+                    if self.rect.top > platform.rect.top:
                         self.rect.top = platform.rect.bottom
                         self.velY = 0
+        for ground in ground_segments:
+            if ground.collidepoint(self.rect.midbottom):
+                # Check if the player is over a hole
+                in_hole = False
+                for hole in holes:
+                    hole_rect = pygame.Rect(hole[0] + scroll, screenHeight - ground_height, hole[1], ground_height)
+                    if hole_rect.collidepoint(self.rect.midbottom):
+                        in_hole = True
+                        break
+
+                if not in_hole and self.velY > 0 :  # Falling down
+                    if self.rect.bottom <= ground.bottom:
+                        self.rect.bottom = ground.top
+                        self.velY = 0
+                        self.jumpsLeft = self.maxJumps
+                        break
+
 
     def attack(self):
         pass  # Filler for attack logic
@@ -109,17 +126,111 @@ class Platform(pygame.sprite.Sprite):
         pygame.draw.rect(screen, (255, 0, 0), self.rect, 2)
         
 
+# Define ground and holes
+
+
+# Load ground image
+groundImg = pygame.image.load('imgs/world/ground.jpg').convert_alpha()
+groundImg = pygame.transform.scale(groundImg, (50, ground_height))  # Adjust as needed
+
+def create_ground_segments(total_length, holes, ground_height):
+    segments = []
+    current_x = 0
+
+    for hole in holes:
+        hole_start, hole_width = hole
+        if current_x < hole_start:
+            segment_length = hole_start - current_x
+            num_segments = math.ceil(segment_length / groundImg.get_width())
+            for i in range(num_segments):
+                x = current_x + i * groundImg.get_width()
+                segments.append(pygame.Rect(x, screenHeight - ground_height, groundImg.get_width(), ground_height))
+        current_x = hole_start + hole_width
+    if current_x < total_length:
+        segment_length = total_length - current_x
+        num_segments = math.ceil(segment_length / groundImg.get_width())
+        for i in range(num_segments):
+            x = current_x + i * groundImg.get_width()
+            segments.append(pygame.Rect(x, screenHeight - ground_height, groundImg.get_width(), ground_height))
+
+    return segments
+
+
+##### LEVEL CREATION #####
+
+# Draw ground segments
+def drawGround():
+    for segment in ground_segments:
+        screen.blit(groundImg, (segment.x + scroll, segment.y))
+
+def createPlatforms(currentLevel):
+    level_platforms = []
+
+    # LEVEL 1 PLATFORM CREATION
+    if currentLevel == 1:
+        platforms = [
+        Platform(200, 450, 200, 20),
+        Platform(400, 450, 100, 20),
+        Platform(600, 450, 100, 20)
+        ]
+
+
+    # LEVEL 2 PLATFORM CREATION
+
+    # APPEND ALL PLATFORMS
+    for platform in platforms:
+        level_platforms.append(platform)
+    return level_platforms
+def createHoles(currentLevel):
+    level_holes = []
+
+    # LEVEL 1 PLATFORM CREATION
+    if currentLevel == 1:
+        # Format (position, width)
+        holes = [
+            (500, 100), 
+            (800, 100), 
+            (1500, 100)
+        ]   
+
+    # LEVEL 2 PLATFORM CREATION
+
+    # APPEND ALL PLATFORMS
+    for hole in holes:
+        level_holes.append(hole)
+    return level_holes
+
+def getLength(currentLevel):
+    # Create level lengths
+    if currentLevel == 1:
+        return 6000
+currentLevel = 1
+
+# Call all level creation methods
+platforms = createPlatforms(currentLevel)
+holes = createHoles(currentLevel)
+currentLevelLength = getLength(currentLevel)
+#enemies = createEnemies(currentLevel)
+
+# Create the level ground
+
+
+ground_segments = create_ground_segments(currentLevelLength, holes, ground_height)
+
+# CREATE ENEMIES FOR LEVEL
+
+
+##### END OF LEVEL CREATION #####
+
+
+
 scroll = 0
 
 # Create the main player
 player = Combatant(int(screenWidth * .47), screenHeight * 0.89, scale)
 
 # Create the platforms
-platforms = [
-    Platform(200, 500, 200, 20),
-    Platform(400, 500, 100, 20),
-    Platform(600, 400, 100, 20)
-]
+
 running = True
 while running:
     clock.tick(50)
@@ -144,7 +255,7 @@ while running:
 
     player.update()
     player.draw()
-
+    drawGround()
     for platform in platforms:
         platform.draw()
     pygame.display.update()
