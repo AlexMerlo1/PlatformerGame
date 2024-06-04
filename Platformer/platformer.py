@@ -17,6 +17,21 @@ scale = 0.4
 ground_height = 50
 
 
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, x, y, direction):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.Surface((10, 5))
+        self.image.fill((255, 255, 255))
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
+        self.speed = 10
+        self.direction = direction
+
+
+    def update(self):
+        self.rect.x += self.speed * self.direction
+        if self.rect.right < 0 or self.rect.left > screenWidth:
+            self.kill()
 
 
 class Combatant(pygame.sprite.Sprite):
@@ -38,20 +53,29 @@ class Combatant(pygame.sprite.Sprite):
         self.orientationLeft = self.image
         self.orientationRight = pygame.transform.flip(self.image, True, False)
 
+        self.direction = 1
+
+        self.bullets = pygame.sprite.Group()
+        self.shootCooldown = 500
+        self.lastShot = pygame.time.get_ticks()
+
+
     def draw(self):
         # Blit the current image to the screen at the current position
         screen.blit(self.image, self.rect.topleft)
         pygame.draw.rect(screen, (255, 0, 0), self.rect, 2)
-
+        self.bullets.draw(screen)
 
     def move(self, direction):
         if direction == 'left':  # Check to make sure the player does not go off the left side
             self.image = self.orientationLeft
+            self.direction = -1
             if self.rect.x > self.fixedLeftPosition:
                 self.rect.x -= self.speed
             return -self.speed  # Scroll background right
         elif direction == 'right':
             self.image = self.orientationRight
+            self.direction = 1
             # Keep the player fixed when moving right and scroll the background
             if self.rect.x < self.fixedRightPosition:
                 self.rect.x += self.speed
@@ -91,16 +115,25 @@ class Combatant(pygame.sprite.Sprite):
                         in_hole = True
                         break
 
-                if not in_hole and self.velY > 0 :  # Falling down
+                if not in_hole and self.velY > 0:  # Falling down
                     if self.rect.bottom <= ground.bottom:
                         self.rect.bottom = ground.top
                         self.velY = 0
                         self.jumpsLeft = self.maxJumps
                         break
 
+        self.bullets.update()
+
+    def shoot(self):
+        current_time = pygame.time.get_ticks()
+        if current_time - self.lastShot > self.shootCooldown:
+            bullet = Bullet(self.rect.centerx, self.rect.centery, self.direction)
+            self.bullets.add(bullet)
+            self.lastShot = current_time
+
 
     def attack(self):
-        pass  # Filler for attack logic
+        self.shoot()  # Filler for attack logic
 
 
 def drawBackground(scroll):
@@ -115,16 +148,16 @@ class Platform(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.image.load('imgs/world/platform.png').convert_alpha()
-        self.image = pygame.transform.scale(self.image, (width, height)) 
+        self.image = pygame.transform.scale(self.image, (width, height))
         self.rect = self.image.get_rect()
         self.rect.topleft = (x, y)
-        self.fixed_x = x  
+        self.fixed_x = x
 
     def draw(self):
         self.rect.x = self.fixed_x + scroll
         screen.blit(self.image, self.rect.topleft)
         pygame.draw.rect(screen, (255, 0, 0), self.rect, 2)
-        
+
 
 # Define ground and holes
 
@@ -132,6 +165,7 @@ class Platform(pygame.sprite.Sprite):
 # Load ground image
 groundImg = pygame.image.load('imgs/world/ground.jpg').convert_alpha()
 groundImg = pygame.transform.scale(groundImg, (50, ground_height))  # Adjust as needed
+
 
 def create_ground_segments(total_length, holes, ground_height):
     segments = []
@@ -163,17 +197,17 @@ def drawGround():
     for segment in ground_segments:
         screen.blit(groundImg, (segment.x + scroll, segment.y))
 
+
 def createPlatforms(currentLevel):
     level_platforms = []
 
     # LEVEL 1 PLATFORM CREATION
     if currentLevel == 1:
         platforms = [
-        Platform(200, 450, 200, 20),
-        Platform(400, 450, 100, 20),
-        Platform(600, 450, 100, 20)
+            Platform(200, 450, 200, 20),
+            Platform(400, 450, 100, 20),
+            Platform(600, 450, 100, 20)
         ]
-
 
     # LEVEL 2 PLATFORM CREATION
 
@@ -181,6 +215,8 @@ def createPlatforms(currentLevel):
     for platform in platforms:
         level_platforms.append(platform)
     return level_platforms
+
+
 def createHoles(currentLevel):
     level_holes = []
 
@@ -188,22 +224,25 @@ def createHoles(currentLevel):
     if currentLevel == 1:
         # Format (position, width)
         holes = [
-            (500, 100), 
-            (800, 100), 
+            (500, 100),
+            (800, 100),
             (1500, 100)
-        ]   
+        ]
 
-    # LEVEL 2 PLATFORM CREATION
+        # LEVEL 2 PLATFORM CREATION
 
     # APPEND ALL PLATFORMS
     for hole in holes:
         level_holes.append(hole)
     return level_holes
 
+
 def getLength(currentLevel):
     # Create level lengths
     if currentLevel == 1:
         return 6000
+
+
 currentLevel = 1
 
 # Call all level creation methods
@@ -221,7 +260,6 @@ ground_segments = create_ground_segments(currentLevelLength, holes, ground_heigh
 
 
 ##### END OF LEVEL CREATION #####
-
 
 
 scroll = 0
@@ -249,6 +287,8 @@ while running:
         scrollChange = player.move('right')
     if keys[pygame.K_UP]:
         player.jump()  # Activate jump on up arrow press
+    if keys[pygame.K_SPACE]:
+        player.attack()
 
     if scrollChange != 0:
         scroll -= scrollChange  # Update scroll based on player movement
