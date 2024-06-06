@@ -9,7 +9,7 @@ screenHeight = int(screenWidth * 0.8)
 screen = pygame.display.set_mode((screenWidth, screenHeight))
 pygame.display.set_caption("Platformer")
 
-background = pygame.image.load('imgs/world/background.jpg').convert()
+background = pygame.image.load('Platformer\\imgs\\world\\background.jpg').convert()
 background = pygame.transform.scale(background, (screenWidth, screenHeight))
 backgroundWidth = background.get_width()
 
@@ -35,9 +35,9 @@ class Bullet(pygame.sprite.Sprite):
 
 
 class Combatant(pygame.sprite.Sprite):
-    def __init__(self, x, y, scale):
+    def __init__(self, x, y, scale, type):
         pygame.sprite.Sprite.__init__(self)
-        img = pygame.image.load('imgs/player/mainPlayer_Edit.png')
+        img = pygame.image.load('platformer/imgs/player/mainPlayer_Edit.png')
         self.image = pygame.transform.scale(img, (int(img.get_width() * scale), int(img.get_height() * scale)))
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
@@ -47,6 +47,7 @@ class Combatant(pygame.sprite.Sprite):
         self.velY = 0
         self.jumpsLeft = 2
         self.maxJumps = 2
+        self.type = type
 
         self.fixedLeftPosition = screenWidth * 0.425
         self.fixedRightPosition = screenWidth * 0.425
@@ -67,13 +68,13 @@ class Combatant(pygame.sprite.Sprite):
         self.bullets.draw(screen)
 
     def move(self, direction):
-        if direction == 'left':  # Check to make sure the player does not go off the left side
+        if direction == 'left' and self.type == 'player':  # Check to make sure the player does not go off the left side
             self.image = self.orientationLeft
             self.direction = -1
             if self.rect.x > self.fixedLeftPosition:
                 self.rect.x -= self.speed
             return -self.speed  # Scroll background right
-        elif direction == 'right':
+        elif direction == 'right' and self.type == 'player':
             self.image = self.orientationRight
             self.direction = 1
             # Keep the player fixed when moving right and scroll the background
@@ -135,6 +136,82 @@ class Combatant(pygame.sprite.Sprite):
     def attack(self):
         self.shoot()  # Filler for attack logic
 
+# Create the enemy class
+class Enemy(Combatant):
+    def __init__(self, x, y, scale, type):
+        super().__init__(x, y, scale, type)
+        img = pygame.image.load('Platformer\\imgs\\player\\mainPlayer_Edit.png')
+        self.image = pygame.transform.scale(img, (int(img.get_width() * scale), int(img.get_height() * scale)))
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
+        self.world_x = x
+        self.world_y = y
+        self.speed = 2
+        self.direction = 1
+
+    def update(self):
+        # Move enemy horizontally
+        self.world_x += self.speed * self.direction
+        if(self.direction == 'right'):
+            self.image = self.orientationRight
+        else:
+            self.orientationRight
+        # Check if the enemy is on the ground
+        on_ground_left = False
+        on_ground_right = False
+        for ground in ground_segments:
+            if ground.collidepoint((self.world_x, self.rect.bottom)):
+                on_ground_left = True
+            if ground.collidepoint((self.world_x + self.rect.width, self.rect.bottom)):
+                on_ground_right = True
+
+        if not on_ground_left or not on_ground_right:
+            # Turn around if either bottom corner is not on ground
+            self.direction *= -1
+
+        self.world_x += self.speed * self.direction
+        self.rect.x = self.world_x
+
+        # Update the vertical position based on gravity and ground collisions
+        self.velY += self.gravity
+        self.world_y += self.velY
+        self.rect.y = self.world_y
+
+        for ground in ground_segments:
+            if ground.collidepoint((self.world_x, self.rect.midbottom[1])):
+                if self.velY > 0:  # Falling down
+                    if self.rect.bottom <= ground.bottom:
+                        self.rect.bottom = ground.top
+                        self.velY = 0
+                        self.jumpsLeft = self.maxJumps
+                        self.world_y = self.rect.y
+
+        self.bullets.update()
+
+    def draw(self):
+        # Adjust the enemy's position relative to the scroll value
+        screen.blit(self.image, (self.world_x + scroll, self.rect.y))
+        pygame.draw.rect(screen, (255, 0, 0), (self.world_x + scroll, self.rect.y, self.rect.width, self.rect.height), 2)
+        if self.direction == -1:
+            self.image = self.orientationLeft
+        else:
+            self.image = self.orientationRight
+
+def createEnemies(currentLevel):
+    level_enemies = []
+
+    if currentLevel == 1:
+        enemies = [
+            Enemy(800, screenHeight - ground_height - 50, scale, 'enemy'),
+            Enemy(1200, screenHeight - ground_height - 50, scale, 'enemy'),
+            Enemy(1600, screenHeight - ground_height - 50, scale, 'enemy')
+        ]
+
+    for enemy in enemies:
+        level_enemies.append(enemy)
+    return level_enemies
+
+
 
 def drawBackground(scroll):
     # Draw background with seamless tiling
@@ -147,7 +224,7 @@ def drawBackground(scroll):
 class Platform(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load('imgs/world/platform.png').convert_alpha()
+        self.image = pygame.image.load('platformer/imgs/world/platform.png').convert_alpha()
         self.image = pygame.transform.scale(self.image, (width, height))
         self.rect = self.image.get_rect()
         self.rect.topleft = (x, y)
@@ -160,10 +237,8 @@ class Platform(pygame.sprite.Sprite):
 
 
 # Define ground and holes
-
-
 # Load ground image
-groundImg = pygame.image.load('imgs/world/ground.jpg').convert_alpha()
+groundImg = pygame.image.load('platformer/imgs/world/ground.jpg').convert_alpha()
 groundImg = pygame.transform.scale(groundImg, (50, ground_height))  # Adjust as needed
 
 
@@ -253,11 +328,11 @@ currentLevelLength = getLength(currentLevel)
 
 # Create the level ground
 
-
 ground_segments = create_ground_segments(currentLevelLength, holes, ground_height)
 
 # CREATE ENEMIES FOR LEVEL
 
+enemies = createEnemies(currentLevel)
 
 ##### END OF LEVEL CREATION #####
 
@@ -265,7 +340,7 @@ ground_segments = create_ground_segments(currentLevelLength, holes, ground_heigh
 scroll = 0
 
 # Create the main player
-player = Combatant(int(screenWidth * .47), screenHeight * 0.89, scale)
+player = Combatant(int(screenWidth * .47), screenHeight * 0.89, scale, 'player')
 
 # Create the platforms
 
@@ -298,6 +373,9 @@ while running:
     drawGround()
     for platform in platforms:
         platform.draw()
+    for enemy in enemies:
+        enemy.update()
+        enemy.draw()
     pygame.display.update()
 
 pygame.quit()
