@@ -26,11 +26,17 @@ class Bullet(pygame.sprite.Sprite):
         self.rect.center = (x, y)
         self.speed = 10
         self.direction = direction
-
+    def is_colliding_horizontally(self):
+        # Check collision with raised ground segments
+        for segment in raised_segments:
+            segment_rect = pygame.Rect(segment[0] + scroll, segment[1], segment[2], ground_height)
+            if self.rect.colliderect(segment_rect):
+                return True
+        return False
 
     def update(self):
         self.rect.x += self.speed * self.direction
-        if self.rect.right < 0 or self.rect.left > screenWidth:
+        if self.rect.right < 0 or self.rect.left > screenWidth or self.is_colliding_horizontally():
             self.kill()
 
 
@@ -106,6 +112,7 @@ class Combatant(pygame.sprite.Sprite):
                     if self.rect.top > platform.rect.top:
                         self.rect.top = platform.rect.bottom
                         self.velY = 0
+        on_ground = False
         for ground in ground_segments:
             if ground.collidepoint(self.rect.midbottom):
                 # Check if the player is over a hole
@@ -122,8 +129,38 @@ class Combatant(pygame.sprite.Sprite):
                         self.velY = 0
                         self.jumpsLeft = self.maxJumps
                         break
+        if self.is_colliding_horizontally():
+            player.rect.x -= -1 * self.speed
+        on_ground = self.is_colliding_vertically()
+
+        if on_ground:
+            self.jumpsLeft = self.maxJumps
 
         self.bullets.update()
+
+    def is_colliding_vertically(self):
+        for segment in raised_segments:
+            segment_rect = pygame.Rect(segment[0] + scroll, segment[1], segment[2], ground_height)
+            if segment_rect.colliderect(self.rect):
+                if self.velY > 0:  # Falling down
+                    if self.rect.bottom <= segment_rect.bottom:
+                        self.rect.bottom = segment_rect.top
+                        self.velY = 0
+                        self.jumpsLeft = self.maxJumps
+                        return True
+                elif self.velY < 0:  # Moving up
+                    if self.rect.top > segment_rect.top:
+                        self.rect.top = segment_rect.bottom
+                        self.velY = 0
+        return False
+    def is_colliding_horizontally(self):
+        # Check collision with raised ground segments
+        for segment in raised_segments:
+            segment_rect = pygame.Rect(segment[0] + scroll, segment[1], segment[2], ground_height)
+            if self.rect.collidepoint(segment_rect.midleft) or self.rect.collidepoint(segment_rect.midright):
+                return True
+        return False
+    
 
     def shoot(self):
         current_time = pygame.time.get_ticks()
@@ -176,7 +213,6 @@ class Enemy(Combatant):
         self.velY += self.gravity
         self.world_y += self.velY
         self.rect.y = self.world_y
-
         for ground in ground_segments:
             if ground.collidepoint((self.world_x, self.rect.midbottom[1])):
                 if self.velY > 0:  # Falling down
@@ -185,7 +221,6 @@ class Enemy(Combatant):
                         self.velY = 0
                         self.jumpsLeft = self.maxJumps
                         self.world_y = self.rect.y
-
         self.bullets.update()
 
     def draw(self):
@@ -264,6 +299,23 @@ def create_ground_segments(total_length, holes, ground_height):
 
     return segments
 
+def createRaisedGroundSegments(currentLevel):
+    raised_segments = []
+
+    if currentLevel == 1:
+        # (x, y, width)
+        raised_segments = [
+            (800, screenHeight - ground_height - 150, 300),
+            (1500, screenHeight - ground_height - 200, 400)
+        ]
+        # Create additional raised segments that start from x = 0
+        num_segments = screenHeight // ground_height  # Calculate the number of segments needed
+
+        for i in range(num_segments):
+            x = 0
+            y = i * ground_height
+            raised_segments.append((x, y, ground_height))
+    return raised_segments
 
 ##### LEVEL CREATION #####
 
@@ -271,6 +323,13 @@ def create_ground_segments(total_length, holes, ground_height):
 def drawGround():
     for segment in ground_segments:
         screen.blit(groundImg, (segment.x + scroll, segment.y))
+    for segment in raised_segments:
+        x, y, width = segment
+        num_segments = math.ceil(width / groundImg.get_width())
+        for i in range(num_segments):
+            screen.blit(groundImg, (x + i * groundImg.get_width() + scroll, y))
+
+
 
 
 def createPlatforms(currentLevel):
@@ -324,15 +383,14 @@ currentLevel = 1
 platforms = createPlatforms(currentLevel)
 holes = createHoles(currentLevel)
 currentLevelLength = getLength(currentLevel)
-#enemies = createEnemies(currentLevel)
-
-# Create the level ground
-
-ground_segments = create_ground_segments(currentLevelLength, holes, ground_height)
 
 # CREATE ENEMIES FOR LEVEL
-
 enemies = createEnemies(currentLevel)
+# Create the level ground
+ground_segments = create_ground_segments(currentLevelLength, holes, ground_height)
+raised_segments = createRaisedGroundSegments(currentLevel)
+
+
 
 ##### END OF LEVEL CREATION #####
 
@@ -365,7 +423,7 @@ while running:
     if keys[pygame.K_SPACE]:
         player.attack()
 
-    if scrollChange != 0:
+    if scrollChange != 0 and not player.is_colliding_horizontally():
         scroll -= scrollChange  # Update scroll based on player movement
 
     player.update()
