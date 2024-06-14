@@ -9,7 +9,7 @@ screenHeight = int(screenWidth * 0.8)
 screen = pygame.display.set_mode((screenWidth, screenHeight))
 pygame.display.set_caption("Platformer")
 
-background = pygame.image.load('Platformer\\imgs\\world\\background.jpg').convert()
+background = pygame.image.load('imgs/world/background.jpg').convert()
 background = pygame.transform.scale(background, (screenWidth, screenHeight))
 backgroundWidth = background.get_width()
 
@@ -43,7 +43,7 @@ class Bullet(pygame.sprite.Sprite):
 class Combatant(pygame.sprite.Sprite):
     def __init__(self, x, y, scale, type):
         pygame.sprite.Sprite.__init__(self)
-        img = pygame.image.load('platformer/imgs/player/mainPlayer_Edit.png')
+        img = pygame.image.load('imgs/player/mainPlayer_Edit.png')
         self.image = pygame.transform.scale(img, (int(img.get_width() * scale), int(img.get_height() * scale)))
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
@@ -177,7 +177,7 @@ class Combatant(pygame.sprite.Sprite):
 class Enemy(Combatant):
     def __init__(self, x, y, scale, type):
         super().__init__(x, y, scale, type)
-        img = pygame.image.load('Platformer\\imgs\\player\\mainPlayer_Edit.png')
+        img = pygame.image.load('imgs/player/mainPlayer_Edit.png')
         self.image = pygame.transform.scale(img, (int(img.get_width() * scale), int(img.get_height() * scale)))
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
@@ -259,7 +259,7 @@ def drawBackground(scroll):
 class Platform(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load('platformer/imgs/world/platform.png').convert_alpha()
+        self.image = pygame.image.load('imgs/world/platform.png').convert_alpha()
         self.image = pygame.transform.scale(self.image, (width, height))
         self.rect = self.image.get_rect()
         self.rect.topleft = (x, y)
@@ -273,7 +273,7 @@ class Platform(pygame.sprite.Sprite):
 
 # Define ground and holes
 # Load ground image
-groundImg = pygame.image.load('platformer/imgs/world/ground.jpg').convert_alpha()
+groundImg = pygame.image.load('imgs/world/ground.jpg').convert_alpha()
 groundImg = pygame.transform.scale(groundImg, (50, ground_height))  # Adjust as needed
 
 
