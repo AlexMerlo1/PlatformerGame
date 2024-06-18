@@ -16,7 +16,6 @@ backgroundWidth = background.get_width()
 scale = 0.4
 ground_height = 50
 
-
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y, direction):
         pygame.sprite.Sprite.__init__(self)
@@ -39,7 +38,6 @@ class Bullet(pygame.sprite.Sprite):
         if self.rect.right < 0 or self.rect.left > screenWidth or self.is_colliding_horizontally():
             self.kill()
 
-
 class Combatant(pygame.sprite.Sprite):
     def __init__(self, x, y, scale, type):
         pygame.sprite.Sprite.__init__(self)
@@ -49,12 +47,12 @@ class Combatant(pygame.sprite.Sprite):
         self.rect.center = (x, y)
         self.speed = 6
         self.jumpSpeed = 20
-        self.gravity = 1.7
+        self.gravity = 1.3
         self.velY = 0
         self.jumpsLeft = 2
         self.maxJumps = 2
         self.type = type
-
+        self.health = 50
         self.fixedLeftPosition = screenWidth * 0.425
         self.fixedRightPosition = screenWidth * 0.425
         self.orientationLeft = self.image
@@ -66,7 +64,9 @@ class Combatant(pygame.sprite.Sprite):
         self.shootCooldown = 500
         self.lastShot = pygame.time.get_ticks()
 
-
+    def getCords(self):
+        return self.rect.centerx - scroll, self.rect.centery
+    
     def draw(self):
         # Blit the current image to the screen at the current position
         screen.blit(self.image, self.rect.topleft)
@@ -100,18 +100,6 @@ class Combatant(pygame.sprite.Sprite):
         self.velY += self.gravity
         self.rect.y += self.velY
 
-        # Check if on ground
-        for platform in platforms:
-            if platform.rect.colliderect(self.rect):
-                if self.velY > 0:  # Falling down
-                    if self.rect.bottom <= platform.rect.bottom:
-                        self.rect.bottom = platform.rect.top
-                        self.velY = 0
-                        self.jumpsLeft = self.maxJumps
-                elif self.velY < 0:  # Moving up
-                    if self.rect.top > platform.rect.top:
-                        self.rect.top = platform.rect.bottom
-                        self.velY = 0
         on_ground = False
         for ground in ground_segments:
             if ground.collidepoint(self.rect.midbottom):
@@ -130,12 +118,14 @@ class Combatant(pygame.sprite.Sprite):
                         self.jumpsLeft = self.maxJumps
                         break
         if self.is_colliding_horizontally():
-            player.rect.x -= -1 * self.speed
+            self.rect.x -= -1 * self.speed
         on_ground = self.is_colliding_vertically()
 
         if on_ground:
             self.jumpsLeft = self.maxJumps
-
+        if self.player_death():
+            restart_level(player_died = True)
+        self.check_bullet_collisions()
         self.bullets.update()
 
     def is_colliding_vertically(self):
@@ -160,7 +150,7 @@ class Combatant(pygame.sprite.Sprite):
             if self.rect.collidepoint(segment_rect.midleft) or self.rect.collidepoint(segment_rect.midright):
                 return True
         return False
-    
+
 
     def shoot(self):
         current_time = pygame.time.get_ticks()
@@ -169,6 +159,26 @@ class Combatant(pygame.sprite.Sprite):
             self.bullets.add(bullet)
             self.lastShot = current_time
 
+    def check_bullet_collisions(self):
+        for enemy in enemies:
+            enemy_bullets = enemy.bullets
+            for bullet in enemy_bullets:
+                if bullet.rect.colliderect(player.rect):
+                    bullet.kill()
+                    print(f'{self.type.capitalize()} hit!')
+                    self.health -= 10
+                    print(f'Player Health {self.health}')
+
+    def player_death(self):
+        if self.health <= 0:
+            self.kill()
+            print('Player died')
+            return True
+        if self.rect.y >= screenHeight:
+            self.kill()
+            print('Player died')
+            return True
+        return False
 
     def attack(self):
         self.shoot()  # Filler for attack logic
@@ -183,32 +193,92 @@ class Enemy(Combatant):
         self.rect.center = (x, y)
         self.world_x = x
         self.world_y = y
-        self.speed = 2
+        self.speed = 3.5
         self.direction = 1
+        self.detectionRange = 500
+        self.shootCooldown = 2000  # Same as player
+        self.jumpsLeft = 2
+        self.lastShot = pygame.time.get_ticks() 
+        self.jumpCooldown = 1000
+        self.last_jump_time = 0
+        self.jumpSpeed = 22.5
+        self.playerDetectedTimer = 0
+        self.playerDetectedTimeLimit = 2000
+        self.jumpDuration = 1000
+        self.justJumped = False
+        self.health = 30
+    def update(self, player):
 
-    def update(self):
-        # Move enemy horizontally
-        self.world_x += self.speed * self.direction
-        if(self.direction == 'right'):
-            self.image = self.orientationRight
+        # Check collision with raised segments
+        if self.is_colliding_horizontally() or self.is_colliding_vertically():
+            self.rect.x -= -1 * self.speed
+        playerCordsX, playerCordsY = player.getCords()
+        enemyCordsX, enemyCordsY = self.world_x, self.world_y
+        distance = math.sqrt((playerCordsX - enemyCordsX) ** 2 + (playerCordsY - enemyCordsY) ** 2)
+        if distance <= self.detectionRange:
+            playerDetected = True
+            self.playerDetectedTimer = self.playerDetectedTimeLimit
         else:
-            self.orientationRight
-        # Check if the enemy is on the ground
-        on_ground_left = False
-        on_ground_right = False
-        for ground in ground_segments:
-            if ground.collidepoint((self.world_x, self.rect.bottom)):
-                on_ground_left = True
-            if ground.collidepoint((self.world_x + self.rect.width, self.rect.bottom)):
-                on_ground_right = True
+            if self.playerDetectedTimer > 0:
+                playerDetected = True
+                self.playerDetectedTimer -= clock.get_time()
+            else: 
+                playerDetected = False
+        if playerDetected:
+            self.speed = 3.5  # Set a speed for chasing
+            # Calculate direction to player
+            dirX = playerCordsX - enemyCordsX
+            dirY = playerCordsY - enemyCordsY
+            distance = math.sqrt(dirX**2 + dirY**2)
+            dirX /= distance
+            dirY /= distance
+            if playerCordsX < enemyCordsX and playerDetected:
+                self.direction = -1
+            elif playerCordsX > enemyCordsX and playerDetected:
+                self.direction = 1
 
-        if not on_ground_left or not on_ground_right:
-            # Turn around if either bottom corner is not on ground
-            self.direction *= -1
+            if abs(enemyCordsY - playerCordsY) <= 50:
+                self.shoot()
+            current_time = pygame.time.get_ticks()
+            if self.isValidJump(self.world_x, self.world_y) and abs(enemyCordsY - playerCordsY) >= 50:
+                if current_time - self.last_jump_time > self.jumpCooldown:
+                    self.jump()
+                    self.last_jump_time = current_time
+                    self.justJumped = True
+                    self.jumpStartTime = current_time
 
-        self.world_x += self.speed * self.direction
-        self.rect.x = self.world_x
+            if self.justJumped:
+                if current_time - self.jumpStartTime < self.jumpDuration:
+                    self.world_x += dirX * self.speed
+                    self.rect.x = self.world_x
+                else:
+                    self.justJumped = False
 
+            if not self.justJumped:
+
+                if self.on_raised_segment():
+                    self.chase_and_attack(dirX, enemyCordsX, enemyCordsY)
+                    
+                elif self.is_on_ground_left() and playerCordsX <= enemyCordsX:
+                    self.chase_and_attack(dirX, enemyCordsX, enemyCordsY)
+
+                elif self.is_on_ground_right() and playerCordsX >= enemyCordsX:
+                    self.chase_and_attack(dirX, enemyCordsX, enemyCordsY)
+    
+        else:
+            self.speed = 3.5
+            # Ensure enemy stays within bounds or turn around
+            on_ground_left = self.is_on_ground_left()
+            on_ground_right = self.is_on_ground_right()
+
+            if not on_ground_left:
+                self.direction *= -1
+            if not on_ground_right:
+                self.direction *= -1
+
+            self.world_x += self.speed * self.direction
+            self.rect.x = self.world_x
+            
         # Update the vertical position based on gravity and ground collisions
         self.velY += self.gravity
         self.world_y += self.velY
@@ -221,7 +291,124 @@ class Enemy(Combatant):
                         self.velY = 0
                         self.jumpsLeft = self.maxJumps
                         self.world_y = self.rect.y
+        for segment in raised_segments:
+            segment_rect = pygame.Rect(segment[0], segment[1], segment[2], ground_height)
+            if segment_rect.collidepoint((self.world_x, self.rect.bottom)):
+                if self.velY > 0:  # Falling down
+                    if self.rect.bottom <= segment_rect.bottom:
+                        self.rect.bottom = segment_rect.top
+                        self.velY = 0
+                        self.jumpsLeft = self.maxJumps
+                        self.world_y = self.rect.y
+        on_ground = False
+        if self.is_colliding_horizontally():
+            self.rect.x -= -1 * self.speed
+
+        if on_ground:
+            self.jumpsLeft = self.maxJumps
+        if self.enemy_defeated():
+            enemies.remove(self)
         self.bullets.update()
+        self.check_bullet_collisions()
+
+    def on_raised_segment(self):
+        for segment in raised_segments:
+            segment_rect = pygame.Rect(segment[0], segment[1], segment[2], ground_height)
+            if segment_rect.collidepoint((self.rect.bottomleft)) or segment_rect.collidepoint((self.rect.bottomright)):
+                return True
+        return False
+    def chase_and_attack(self, dirX, enemyCordsY, playerCordsY):
+        self.world_x += dirX * self.speed
+        self.rect.x = self.world_x
+        if abs(enemyCordsY - playerCordsY) <= 50:
+            self.shoot()
+
+    def isValidJump(self, world_x, world_y):
+        jumpHeight = 100  
+        hypotenuseDistance = 75
+
+        # Check if there is a platform or raised segment directly above 
+        rect_above = pygame.Rect(self.rect.x, self.rect.y - jumpHeight, self.rect.width, self.rect.height)
+
+        for segment in raised_segments:
+            segment_rect = pygame.Rect(segment[0], segment[1], segment[2], ground_height)
+            if rect_above.colliderect(segment_rect):
+                return False
+
+        direction_multiplier = self.direction
+
+        # Find the nearest obstacle distance
+        nearest_obstacle_distance = float('inf')
+        nearest_obstacle_rect = None
+
+        # Check for raised segments in the direction of movement
+        if direction_multiplier == 1:
+            # Moving to the right
+            for segment in raised_segments:
+                distance = segment[0] - (world_x + self.rect.width)
+                if 0 <= distance < nearest_obstacle_distance:
+                    nearest_obstacle_distance = distance
+                    nearest_obstacle_rect = pygame.Rect(segment[0], segment[1], segment[2], ground_height)
+        elif direction_multiplier == -1:
+            # Moving to the left
+            for segment in raised_segments:
+                distance = world_x - (segment[0] + segment[2])
+                if 0 <= distance < nearest_obstacle_distance:
+                    nearest_obstacle_distance = distance
+                    nearest_obstacle_rect = pygame.Rect(segment[0], segment[1], segment[2], ground_height)
+
+        # Check if the enemy is close enough to jump
+        if nearest_obstacle_distance <= hypotenuseDistance and nearest_obstacle_rect:
+            playerCordsX, playerCordsY = player.getCords()
+            if playerCordsY <= world_y:
+                # Check if there are any obstacles between the enemy and raised segment
+                enemy_rect = pygame.Rect(world_x, world_y, self.rect.width, self.rect.height)
+                if not enemy_rect.colliderect(nearest_obstacle_rect):
+                    # Ensure the enemy is to the obstacle 
+                    if abs(self.rect.y - nearest_obstacle_rect.top) <= jumpHeight:
+                        return True
+
+        return False
+
+    def check_bullet_collisions(self):
+        player_bullets = get_all_player_bullets(player)
+        for bullet in player_bullets:
+            bullet_rect_with_scroll = bullet.rect.copy()
+            bullet_rect_with_scroll.x -= scroll
+            if bullet_rect_with_scroll.colliderect(self.rect):
+                bullet.kill()
+                self.health -= 10
+                print(f'Enemy Health {self.health}')
+    
+    def enemy_defeated(self):
+        if self.health <= 0:
+            self.kill()
+            return True
+        return False
+
+    def is_on_ground_left(self):
+        on_ground_left = False
+        left_x = self.world_x - 10  # Check slightly to the left of the enemy's current position
+        for ground in ground_segments:
+            if ground.collidepoint((left_x, self.rect.bottom)):
+                on_ground_left = True
+        for segment in raised_segments:
+            segment_rect = pygame.Rect(segment[0], segment[1], segment[2], ground_height)
+            if segment_rect.collidepoint((left_x, self.rect.bottom)):
+                on_ground_left = True
+        return on_ground_left
+
+    def is_on_ground_right(self):
+        on_ground_right = False
+        right_x = self.world_x + self.rect.width  # Check slightly to the right of the enemy's current position
+        for ground in ground_segments:
+            if ground.collidepoint((right_x, self.rect.bottom)):
+                on_ground_right = True
+        for segment in raised_segments:
+            segment_rect = pygame.Rect(segment[0], segment[1], segment[2], ground_height)
+            if segment_rect.collidepoint((right_x, self.rect.bottom)):
+                on_ground_right = True
+        return on_ground_right
 
     def draw(self):
         # Adjust the enemy's position relative to the scroll value
@@ -231,22 +418,35 @@ class Enemy(Combatant):
             self.image = self.orientationLeft
         else:
             self.image = self.orientationRight
+        self.bullets.draw(screen)
+    def is_colliding_vertically(self):
+        for segment in raised_segments:
+            segment_rect = pygame.Rect(segment[0], segment[1], segment[2], ground_height)
+            if segment_rect.colliderect(self.rect):
+                if self.velY > 0:  # Falling down
+                    if self.rect.bottom <= segment_rect.bottom:
+                        self.rect.bottom = segment_rect.top + 10
+                        self.velY = 0
+                        self.jumpsLeft = self.maxJumps
+                        self.world_y = self.rect.y - 10
+                        return True
+                elif self.velY < 0:  # Moving up
+                    if self.rect.top > segment_rect.top:
+                        self.rect.top = segment_rect.bottom
+                        self.velY = 0
+                        self.world_y = self.rect.y
+                        
+        return False
+    def shoot(self):
+        current_time = pygame.time.get_ticks()
+        if current_time - self.lastShot > self.shootCooldown:
+            bullet = Bullet(self.rect.centerx + scroll, self.rect.centery, self.direction)
+            self.bullets.add(bullet)
+            self.lastShot = current_time
 
-def createEnemies(currentLevel):
-    level_enemies = []
 
-    if currentLevel == 1:
-        enemies = [
-            Enemy(800, screenHeight - ground_height - 50, scale, 'enemy'),
-            Enemy(1200, screenHeight - ground_height - 50, scale, 'enemy'),
-            Enemy(1600, screenHeight - ground_height - 50, scale, 'enemy')
-        ]
-
-    for enemy in enemies:
-        level_enemies.append(enemy)
-    return level_enemies
-
-
+def get_all_player_bullets(player):
+    return list(player.bullets)
 
 def drawBackground(scroll):
     # Draw background with seamless tiling
@@ -256,26 +456,73 @@ def drawBackground(scroll):
         screen.blit(background, (relX, 0))
 
 
-class Platform(pygame.sprite.Sprite):
-    def __init__(self, x, y, width, height):
-        pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load('platformer/imgs/world/platform.png').convert_alpha()
-        self.image = pygame.transform.scale(self.image, (width, height))
-        self.rect = self.image.get_rect()
-        self.rect.topleft = (x, y)
-        self.fixed_x = x
+### START AND END GAME BEHAVIORS ###
+def start_game():
+    pass
 
-    def draw(self):
-        self.rect.x = self.fixed_x + scroll
-        screen.blit(self.image, self.rect.topleft)
-        pygame.draw.rect(screen, (255, 0, 0), self.rect, 2)
+def end_game():
+    pass
 
+def restart_level(player_died):
+    if player_died == True:
+        return False # End game if Player dies
+    else:
+        return True
+
+
+### END OF GAME ENDING BEHAVIORS ###
 
 # Define ground and holes
 # Load ground image
 groundImg = pygame.image.load('platformer/imgs/world/ground.jpg').convert_alpha()
 groundImg = pygame.transform.scale(groundImg, (50, ground_height))  # Adjust as needed
 
+
+##### LEVEL CREATION #####
+
+# Draw ground segments
+def drawGround():
+    for segment in ground_segments:
+        screen.blit(groundImg, (segment.x + scroll, segment.y))
+    for segment in raised_segments:
+        x, y, width = segment
+        num_segments = math.ceil(width / groundImg.get_width())
+        for i in range(num_segments):
+            screen.blit(groundImg, (x + i * groundImg.get_width() + scroll, y))
+
+def createEnemies(currentLevel):
+    level_enemies = []
+
+    if currentLevel == 1:
+        enemies = [
+            Enemy(1200, screenHeight - ground_height - 50, scale, 'enemy'),
+            Enemy(3200, screenHeight - ground_height - 50, scale, 'enemy'),
+            Enemy(2200, screenHeight - ground_height - 50, scale, 'enemy'),
+            Enemy(5000, screenHeight - ground_height - 50, scale, 'enemy')
+        ]
+
+    for enemy in enemies:
+        level_enemies.append(enemy)
+    return level_enemies
+
+def createHoles(currentLevel):
+    level_holes = []
+
+    # LEVEL 1 Holes CREATION
+    if currentLevel == 1:
+        # Format (position, width)
+        holes = [
+            (500, 100),
+            (800, 100),
+            (1500, 100)
+        ]
+
+    # LEVEL 2 Holes CREATION
+
+    # APPEND ALL HOLES
+    for hole in holes:
+        level_holes.append(hole)
+    return level_holes
 
 def create_ground_segments(total_length, holes, ground_height):
     segments = []
@@ -306,10 +553,17 @@ def createRaisedGroundSegments(currentLevel):
         # (x, y, width)
         raised_segments = [
             (800, screenHeight - ground_height - 150, 300),
-            (1500, screenHeight - ground_height - 200, 400)
+            (1500, screenHeight - ground_height - 150, 400),
+            (2000, screenHeight - ground_height - 300, 200),
+            (3000, screenHeight - ground_height - 150, 400),
+            (3350, screenHeight - ground_height - 300, 200),
+            (3600, screenHeight - ground_height - 450, 400),
+            (5000, screenHeight - ground_height - 150, 200),
+            (5400, screenHeight - ground_height - 250, 400)
+
         ]
-        # Create additional raised segments that start from x = 0
-        num_segments = screenHeight // ground_height  # Calculate the number of segments needed
+        # Create raised segments from ground to top of screen
+        num_segments = screenHeight // ground_height  
 
         for i in range(num_segments):
             x = 0
@@ -317,75 +571,21 @@ def createRaisedGroundSegments(currentLevel):
             raised_segments.append((x, y, ground_height))
     return raised_segments
 
-##### LEVEL CREATION #####
-
-# Draw ground segments
-def drawGround():
-    for segment in ground_segments:
-        screen.blit(groundImg, (segment.x + scroll, segment.y))
-    for segment in raised_segments:
-        x, y, width = segment
-        num_segments = math.ceil(width / groundImg.get_width())
-        for i in range(num_segments):
-            screen.blit(groundImg, (x + i * groundImg.get_width() + scroll, y))
-
-
-
-
-def createPlatforms(currentLevel):
-    level_platforms = []
-
-    # LEVEL 1 PLATFORM CREATION
-    if currentLevel == 1:
-        platforms = [
-            Platform(200, 450, 200, 20),
-            Platform(400, 450, 100, 20),
-            Platform(600, 450, 100, 20)
-        ]
-
-    # LEVEL 2 PLATFORM CREATION
-
-    # APPEND ALL PLATFORMS
-    for platform in platforms:
-        level_platforms.append(platform)
-    return level_platforms
-
-
-def createHoles(currentLevel):
-    level_holes = []
-
-    # LEVEL 1 PLATFORM CREATION
-    if currentLevel == 1:
-        # Format (position, width)
-        holes = [
-            (500, 100),
-            (800, 100),
-            (1500, 100)
-        ]
-
-        # LEVEL 2 PLATFORM CREATION
-
-    # APPEND ALL PLATFORMS
-    for hole in holes:
-        level_holes.append(hole)
-    return level_holes
-
-
 def getLength(currentLevel):
     # Create level lengths
     if currentLevel == 1:
         return 6000
 
-
+        
 currentLevel = 1
 
 # Call all level creation methods
-platforms = createPlatforms(currentLevel)
 holes = createHoles(currentLevel)
 currentLevelLength = getLength(currentLevel)
 
 # CREATE ENEMIES FOR LEVEL
 enemies = createEnemies(currentLevel)
+
 # Create the level ground
 ground_segments = create_ground_segments(currentLevelLength, holes, ground_height)
 raised_segments = createRaisedGroundSegments(currentLevel)
@@ -399,13 +599,11 @@ scroll = 0
 
 # Create the main player
 player = Combatant(int(screenWidth * .47), screenHeight * 0.89, scale, 'player')
-
-# Create the platforms
-
+enemy_bullets = pygame.sprite.Group()
 running = True
 while running:
     clock.tick(50)
-    screen.fill((0, 0, 0))  # Clear the screen with black before drawing background
+    screen.fill((0, 0, 0)) 
     drawBackground(scroll)
 
     scrollChange = 0
@@ -429,11 +627,8 @@ while running:
     player.update()
     player.draw()
     drawGround()
-    for platform in platforms:
-        platform.draw()
     for enemy in enemies:
-        enemy.update()
+        enemy.update(player)
         enemy.draw()
     pygame.display.update()
-
 pygame.quit()
