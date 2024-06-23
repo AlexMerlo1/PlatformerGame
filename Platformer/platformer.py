@@ -9,7 +9,7 @@ screenHeight = int(screenWidth * 0.8)
 screen = pygame.display.set_mode((screenWidth, screenHeight))
 pygame.display.set_caption("Platformer")
 
-background = pygame.image.load('imgs/world/background.jpg').convert()
+background = pygame.image.load('Platformer/imgs/world/background.jpg').convert()
 background = pygame.transform.scale(background, (screenWidth, screenHeight))
 backgroundWidth = background.get_width()
 
@@ -41,7 +41,7 @@ class Bullet(pygame.sprite.Sprite):
 class Combatant(pygame.sprite.Sprite):
     def __init__(self, x, y, scale, type):
         pygame.sprite.Sprite.__init__(self)
-        img = pygame.image.load('imgs/player/mainPlayer_Edit.png')
+        img = pygame.image.load('Platformer/imgs/player/mainPlayer_Edit.png')
         self.image = pygame.transform.scale(img, (int(img.get_width() * scale), int(img.get_height() * scale)))
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
@@ -187,7 +187,7 @@ class Combatant(pygame.sprite.Sprite):
 class Enemy(Combatant):
     def __init__(self, x, y, scale, type):
         super().__init__(x, y, scale, type)
-        img = pygame.image.load('imgs/player/mainPlayer_Edit.png')
+        img = pygame.image.load('Platformer/imgs/player/mainPlayer_Edit.png')
         self.image = pygame.transform.scale(img, (int(img.get_width() * scale), int(img.get_height() * scale)))
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
@@ -474,7 +474,7 @@ def restart_level(player_died):
 
 # Define ground and holes
 # Load ground image
-groundImg = pygame.image.load('imgs/world/ground.jpg').convert_alpha()
+groundImg = pygame.image.load('Platformer/imgs/world/ground.jpg').convert_alpha()
 groundImg = pygame.transform.scale(groundImg, (50, ground_height))  # Adjust as needed
 
 
@@ -601,6 +601,7 @@ scroll = 0
 player = Combatant(int(screenWidth * .47), screenHeight * 0.89, scale, 'player')
 enemy_bullets = pygame.sprite.Group()
 running = True
+game_frozen = False
 while running:
     clock.tick(50)
     screen.fill((0, 0, 0)) 
@@ -612,23 +613,35 @@ while running:
             running = False
 
     keys = pygame.key.get_pressed()
-    if keys[pygame.K_LEFT]:
-        scrollChange = player.move('left')
-    if keys[pygame.K_RIGHT]:
-        scrollChange = player.move('right')
-    if keys[pygame.K_UP]:
-        player.jump()  # Activate jump on up arrow press
-    if keys[pygame.K_SPACE]:
-        player.attack()
 
-    if scrollChange != 0 and not player.is_colliding_horizontally():
-        scroll -= scrollChange  # Update scroll based on player movement
+    # Check if player is within the level bounds
+    if game_frozen == False:
+        if keys[pygame.K_LEFT]:
+            scrollChange = player.move('left')
+        if keys[pygame.K_RIGHT]:
+            scrollChange = player.move('right')
+        if keys[pygame.K_UP]:
+            player.jump()
+        if keys[pygame.K_SPACE]:
+            player.attack()
+
+    if player.rect.x - scroll >= currentLevelLength:
+        game_frozen = True
+
+
+    # Update scroll based on player movement if not beyond the level length
+    if scrollChange != 0 and not player.is_colliding_horizontally() and player.rect.x <= currentLevelLength:
+        scroll -= scrollChange
 
     player.update()
     player.draw()
     drawGround()
+
     for enemy in enemies:
-        enemy.update(player)
+        if game_frozen == False:  
+            enemy.update(player)
         enemy.draw()
+
     pygame.display.update()
+
 pygame.quit()
