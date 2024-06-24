@@ -516,7 +516,7 @@ def restart_level(player_died):
 
 # Define ground and holes
 # Load ground image
-groundImg = pygame.image.load('Platformer/imgs/world/ground.jpg').convert_alpha()
+groundImg = pygame.image.load('imgs/world/ground.jpg').convert_alpha()
 groundImg = pygame.transform.scale(groundImg, (50, ground_height))  # Adjust as needed
 
 
