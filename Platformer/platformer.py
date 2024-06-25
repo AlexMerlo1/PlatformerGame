@@ -9,7 +9,8 @@ screenHeight = int(screenWidth * 0.8)
 PLAYER_DIED = False
 screen = pygame.display.set_mode((screenWidth, screenHeight))
 pygame.display.set_caption("Platformer")
-
+global restart
+restart = True
 prev_background = pygame.image.load('Platformer/imgs/world/background.jpg').convert()
 prev_background = pygame.transform.scale(prev_background, (screenWidth, screenHeight))
 backgroundWidth = prev_background.get_width()
@@ -65,7 +66,7 @@ class Combatant(pygame.sprite.Sprite):
         self.velY = 0
         self.jumpsLeft = 2
         self.maxJumps = 2
-        self.health = 50
+        self.health = 30
         self.fixedLeftPosition = screenWidth * 0.425
         self.fixedRightPosition = screenWidth * 0.425
         self.orientationLeft = self.image
@@ -83,7 +84,6 @@ class Combatant(pygame.sprite.Sprite):
     def draw(self):
         # Blit the current image to the screen at the current position
         screen.blit(self.image, self.rect.topleft)
-        pygame.draw.rect(screen, (255, 0, 0), self.rect, 2)
         self.bullets.draw(screen)
 
     def move(self, direction):
@@ -143,12 +143,12 @@ class Combatant(pygame.sprite.Sprite):
         for platform in platforms:
             if platform.rect.colliderect(self.rect):
                 if self.velY > 0:  # Falling down
-                    if self.rect.bottom <= platform.rect.bottom:
+                    if self.rect.bottom -5 <= platform.rect.bottom:
                         self.rect.bottom = platform.rect.top
                         self.velY = 0
                         self.jumpsLeft = self.maxJumps
                 elif self.velY < 0:  # Moving up
-                    if self.rect.top >= platform.rect.top:
+                    if self.rect.top + 5 >= platform.rect.top :
                         self.rect.top = platform.rect.bottom
                         self.velY = 0
         self.check_bullet_collisions()
@@ -197,10 +197,8 @@ class Combatant(pygame.sprite.Sprite):
 
     def player_death(self):
         if self.health <= 0:
-            self.kill()
             return True
         if self.rect.y >= screenHeight:
-            self.kill()
             return True
         return False
 
@@ -469,7 +467,6 @@ class Enemy(Combatant):
     def draw(self):
         # Adjust the enemy's position relative to the scroll value
         screen.blit(self.image, (self.world_x + scroll, self.rect.y))
-        pygame.draw.rect(screen, (255, 0, 0), (self.world_x + scroll, self.rect.y, self.rect.width, self.rect.height), 2)
         if self.direction == -1:
             self.image = self.orientationLeft
         else:
@@ -519,12 +516,36 @@ def start_game():
 def end_game():
     pass
 
+
+RestartButtonImg = pygame.image.load('Platformer/imgs/world/restart_button.png').convert_alpha()
+RestartButtonImg = pygame.transform.scale(RestartButtonImg, (screenWidth // 2, screenHeight // 2))
+restart_rect = RestartButtonImg.get_rect(center=(screenWidth // 2, screenHeight // 2))
 def restart_level():
     if player.player_death() == True:
-        return False # End game if Player dies
+        # Display the restart button
+        #screen.blit(RestartButtonImg, restart_rect.topleft)
+        pygame.display.update()
+        
+        
+        # Wait for player to click the restart button
+        '''
+        waiting_for_restart = True
+        while waiting_for_restart:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    return False  # End game if window is closed
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if restart_rect.collidepoint(event.pos):
+                        waiting_for_restart = False
+                        global restart 
+                        restart = True
+                        print('Restart')
+                        return True
+        return False 
     else:
         return True
-
+    '''
 
 ### END OF GAME ENDING BEHAVIORS ###
 
@@ -598,23 +619,28 @@ class Platform(pygame.sprite.Sprite):
         self.rect.topleft = (x, y)
         self.fixed_x = x
         self.direction = direction
+        self.moveSpeed = 2
+        self.delay_timer = 0  # Timer to manage delay
 
     def draw(self):
         self.rect.x = self.fixed_x + scroll
         screen.blit(self.image, self.rect.topleft)
-        pygame.draw.rect(screen, (255, 0, 0), self.rect, 2)
+
     def move(self):
-        moveSpeed = 3
+        if self.delay_timer > 0:
+            self.delay_timer -= 1
+            return
+        
         if self.direction == 'down':
-            self.rect.y += moveSpeed
+            self.rect.y += self.moveSpeed
             if self.rect.y > screenHeight:
-                pygame.time.delay(500)
-                self.rect.y = 0
+                self.delay_timer = 30  
+                self.rect.y = - 50
         elif self.direction == 'up':
-            self.rect.y -= moveSpeed
+            self.rect.y -= self.moveSpeed
             if self.rect.y < 0:
-                pygame.time.delay(500)
-                self.rect.y = screenHeight
+                self.delay_timer = 30  
+                self.rect.y = screenHeight + 50
         else:
             pass
 # Create the platforms
@@ -625,25 +651,24 @@ def create_platforms(current_level):
             Platform(2250, screenHeight - ground_height - 325, 100, 20, 'none'),
 
 
-            Platform(3900, 400, 100, 20, 'down'),
-            Platform(3900, 100, 100, 20, 'down'),
+            Platform(3900, 400, 100, 20, 'up'),
+            Platform(3900, 100, 100, 20, 'up'),
 
-            Platform(4000, 700, 100, 20, 'up'),
-            Platform(4000, 300, 100, 20, 'up'),
-
-            Platform(4200, 700, 100, 20, 'down'),
-            Platform(4200, 300, 100, 20, 'down'),
+            Platform(4150, 700, 100, 20, 'down'),
+            Platform(4150, 300, 100, 20, 'down'),
 
             Platform(4400, 700, 100, 20, 'up'),
             Platform(4400, 300, 100, 20, 'up'),
 
             Platform(4550, 200, 100, 20, 'down'),
-            Platform(4550, 500, 100, 20, 'down')
+            Platform(4550, 500, 100, 20, 'down'),
+
+            Platform(5900, 500, 50, 20, 'none')
+
 
 
         ]
     return platforms
-
 def createRaisedGroundSegments(currentLevel):
     raised_segments = []
 
@@ -671,13 +696,16 @@ def createRaisedGroundSegments(currentLevel):
             (2500 - wall_width, screenHeight - ground_height - 350, wall_width, screenHeight - ground_height - 300),
             (2650 - wall_width, screenHeight - ground_height - 150, wall_width, screenHeight - ground_height ),
             (3300 - wall_width, screenHeight - ground_height - 100, wall_width, screenHeight - ground_height),
-
+            (5400 - wall_width, screenHeight - ground_height - 250, wall_width, screenHeight - ground_height),
+            (6000 - wall_width, 0, 1000, screenHeight // 4),
+            (6000 - wall_width, screenHeight - ground_height - 250, 1000, screenHeight - ground_height)
         ]
         for wall in wall_segments:
             x, base_y, width , height= wall
             for i in range(height // ground_height):  # Iterate over ground units height
                 y = base_y + i * ground_height
                 raised_segments.append((x, y, width))
+            
 
 
     for x in range(0, -325, -25):  # x goes from 0 to -150, in steps of -25
@@ -694,7 +722,9 @@ def createEnemies(currentLevel):
             Enemy(2200, screenHeight - ground_height - 65, scale, 'enemy'),
             Enemy(2800, screenHeight - ground_height - 190, scale, 'enemy'),
             Enemy(3500, screenHeight - ground_height - 65, scale, 'enemy'),
-            Enemy(3500, screenHeight - ground_height - 375, scale, 'enemy')
+            Enemy(3500, screenHeight - ground_height - 375, scale, 'enemy'),
+            Enemy(5700, screenHeight - ground_height - 65, scale, 'enemy'),
+
         ]
 
     for enemy in enemies:
@@ -707,35 +737,38 @@ def getLength(currentLevel):
 
 
 currentLevel = 1
-
-# Call all level creation methods
-holes = createHoles(currentLevel)
-currentLevelLength = getLength(currentLevel)
-
-# CREATE ENEMIES FOR LEVEL
-enemies = createEnemies(currentLevel)
-
-# Create the level ground
-ground_segments = create_ground_segments(currentLevelLength, holes, ground_height)
-raised_segments = createRaisedGroundSegments(currentLevel)
-platforms = create_platforms(currentLevel)
-
-
-##### END OF LEVEL CREATION #####
-
-
-scroll = 0
-
 # Create the main player
-if currentLevel == 1:
-    spawnX = int(screenWidth * .47)
-    spawnY = int(screenHeight * 0.89)
+spawnX = int(screenWidth * .47)
+spawnY = int(screenHeight * 0.89)
 player = Combatant(spawnX, spawnY, scale, 'player')
+
+if restart or restart_level():
+    # Call all level creation methods
+    holes = createHoles(currentLevel)
+    currentLevelLength = getLength(currentLevel)
+
+    # CREATE ENEMIES FOR LEVEL
+    enemies = createEnemies(currentLevel)
+
+    # Create the level ground
+    ground_segments = create_ground_segments(currentLevelLength, holes, ground_height)
+    raised_segments = createRaisedGroundSegments(currentLevel)
+    platforms = create_platforms(currentLevel)
+    ##### END OF LEVEL CREATION #####
+    scroll = 0
+
+    restart = False
+    running = False
+
+
+
+
 enemy_bullets = pygame.sprite.Group()
 running = True
 game_frozen = False
 if PLAYER_DIED == True:
     game_frozen = True
+
 # Show the start screen
 if not start_screen():
     pygame.quit()
@@ -747,7 +780,6 @@ while running:
     clock.tick(50)
     screen.fill((0, 0, 0))
     drawBackground(scroll)
-
     scrollChange = 0
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -769,9 +801,13 @@ while running:
             x, y = player.getCords()
             print(x, round((screenHeight - ground_height - y) / 50) * 50)
 
-    if player.rect.x - scroll >= currentLevelLength:
+    if player.rect.x - scroll >= currentLevelLength + 50:
         game_frozen = True
-
+        player.rect.x += 5
+    if player.rect.x - scroll>= 6500:
+        running = False
+    if player.player_death():
+        running = False
     # Update scroll based on player movement if not beyond the level length
     if scrollChange != 0 and not player.is_colliding_horizontally() and player.rect.x <= currentLevelLength:
         scroll -= scrollChange
