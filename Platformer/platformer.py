@@ -811,10 +811,13 @@ while running:
         if keys[pygame.K_SPACE]:
             player.attack()
 
+
+
     if player.rect.x - scroll >= currentLevelLength + 50:
         game_frozen = True
+        level_completed_sound.play()
         player.rect.x += 5
-    if player.rect.x - scroll>= 6500:
+    if player.rect.x - scroll>= 6800:
         running = False
     if player.player_death():
         running = False
