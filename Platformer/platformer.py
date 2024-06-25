@@ -232,6 +232,7 @@ class Enemy(Combatant):
         self.justJumped = False
         self.health = 30
     def update(self, player):
+        playerDetected = False
 
         # Check collision with raised segments
         if self.is_colliding_horizontally() or self.is_colliding_vertically():
@@ -239,21 +240,22 @@ class Enemy(Combatant):
 
         playerCordsX, playerCordsY = player.getCords()
         enemyCordsX, enemyCordsY = self.world_x, self.world_y
-
+        distance = math.sqrt((playerCordsX - enemyCordsX) ** 2 + (playerCordsY - enemyCordsY) ** 2)
         # Check if there's a clear line of sight between enemy and player
-        if self.has_line_of_sight(playerCordsX, playerCordsY):
-            distance = math.sqrt((playerCordsX - enemyCordsX) ** 2 + (playerCordsY - enemyCordsY) ** 2)
-            if distance <= self.detectionRange:
+        if distance <= self.detectionRange:
+            if self.has_line_of_sight(playerCordsX, playerCordsY):
+                playerDetected = True
                 self.playerDetectedTimer = self.playerDetectedTimeLimit
-        else:
-            if self.playerDetectedTimer > 0:
-                self.playerDetectedTimer -= clock.get_time()
+            else:
+                if self.playerDetectedTimer > 0:
+                    playerDetected = True
+                    self.playerDetectedTimer -= 15
+                else:
+                    playerDetected = False
 
-        if self.playerDetectedTimer > 0:
-            playerDetected = True
-        else:
-            playerDetected = False
-        
+        # Update last update time
+        self.last_update_time = pygame.time.get_ticks()
+       
         if playerDetected:
             self.speed = 3.5  # Set a speed for chasing
             # Calculate direction to player
@@ -351,8 +353,20 @@ class Enemy(Combatant):
         self.bullets.update()
         self.check_bullet_collisions()
     
-    def has_line_of_sight(self, player_x, player_y):
-        return True
+    def has_line_of_sight(self, playerX, playerY):
+        start_pos = (self.rect.centerx + scroll, self.rect.centery)
+        end_pos = (playerX + scroll, playerY)
+        
+        for segment in raised_segments:
+            segment_rect = pygame.Rect(segment[0] + scroll, segment[1], segment[2], ground_height)
+            
+            # Check if the line segment intersects with the rectangle
+            if segment_rect.clipline(start_pos, end_pos):
+                return False  # There is an intersection, no line of sight
+        
+        return True  # No intersections found, line of sight is clear
+
+
     def on_raised_segment(self):
         for segment in raised_segments:
             segment_rect = pygame.Rect(segment[0], segment[1], segment[2], ground_height)
@@ -363,7 +377,9 @@ class Enemy(Combatant):
         self.world_x += dirX * self.speed
         self.rect.x = self.world_x
         if abs(enemyCordsY - playerCordsY) <= 50:
-            self.shoot()
+            current_time = pygame.time.get_ticks()
+            if current_time - self.lastShot > self.shootCooldown:
+                self.shoot()
 
     def isValidJump(self, world_x, world_y):
         jumpHeight = 100  
@@ -516,7 +532,7 @@ def restart_level(player_died):
 
 # Define ground and holes
 # Load ground image
-groundImg = pygame.image.load('imgs/world/ground.jpg').convert_alpha()
+groundImg = pygame.image.load('Platformer/imgs/world/ground.jpg').convert_alpha()
 groundImg = pygame.transform.scale(groundImg, (50, ground_height))  # Adjust as needed
 
 
@@ -675,7 +691,6 @@ def createEnemies(currentLevel):
     if currentLevel == 1:
         enemies = [
             Enemy(1000, screenHeight - ground_height - 50, scale, 'enemy'),
-            Enemy(1600, screenHeight - ground_height - 195, scale, 'enemy'),
             Enemy(2200, screenHeight - ground_height - 65, scale, 'enemy'),
             Enemy(2800, screenHeight - ground_height - 190, scale, 'enemy'),
             Enemy(3500, screenHeight - ground_height - 65, scale, 'enemy'),
