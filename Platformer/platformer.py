@@ -747,6 +747,9 @@ player = Combatant(spawnX, spawnY, scale, 'player')
 enemy_bullets = pygame.sprite.Group()
 running = True
 game_frozen = False
+game_over = False
+game_completed = False
+
 while running:
     clock.tick(50)
     screen.fill((0, 0, 0))
