@@ -3,7 +3,7 @@ import math
 
 # Set screen dimensions
 WIDTH = 800
-HEIGHT = 530
+HEIGHT = int(WIDTH * 0.8)
 
 # Define a function to load and scale images
 def load_image(path):
@@ -15,13 +15,13 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("My Game Intro")
 
 # Load and scale images
-background_image = load_image('imgs/startscreen/background.png')
-game_logo = load_image("imgs/startscreen/game_logo.png")
-start_button = load_image("imgs/startscreen/start_button.png")
-options_button = load_image("imgs/startscreen/options_button.png")
-back_button = load_image("imgs/startscreen/back_button.png")
-brightness_button = load_image("imgs/startscreen/brightness_button.png")
-dim_button = load_image("imgs/startscreen/dim_button.png")
+background_image = load_image('Platformer/imgs/startscreen/background.png')
+game_logo = load_image("Platformer/imgs/startscreen/game_logo.png")
+start_button = load_image("Platformer/imgs/startscreen/start_button.png")
+options_button = load_image("Platformer/imgs/startscreen/options_button.png")
+back_button = load_image("Platformer/imgs/startscreen/back_button.png")
+brightness_button = load_image("Platformer/imgs/startscreen/brightness_button.png")
+dim_button = load_image("Platformer/imgs/startscreen/dim_button.png")
 
 # Set scaling factors for images
 logo_reduction_factor = 0.04
@@ -69,7 +69,7 @@ clock = pygame.time.Clock()
 
 # Initialize the mixer module to play music in the background
 pygame.mixer.init()
-pygame.mixer.music.load('music/background_music.mp3')
+pygame.mixer.music.load('Platformer/music/background_music.mp3')
 pygame.mixer.music.play(-1)
 
 running = True
@@ -79,13 +79,15 @@ brightness_level = 1.0  # Initialize brightness level
 
 # Function to adjust brightness
 def apply_brightness(surface, level):
-    brightness_surface = pygame.Surface(surface.get_size()).convert_alpha()
-    brightness_surface.fill((255, 255, 255, int(255 * (level - 1))))
-    surface.blit(brightness_surface, (0, 0))
+    print(level)
+    if level > 1:
+        brightness_surface = pygame.Surface(surface.get_size()).convert_alpha()
+        brightness_surface.fill((255, 255, 255, int(255 * (level - 1))))
+        surface.blit(brightness_surface, (0, 0))
 
 # Define a function for the logo on the second page
 def draw_second_page_logo():
-    logo_path = 'your_logo.png'  # Replace with your own logo path
+    logo_path = 'Platformer\imgs\startscreen\your_logo.png' 
     logo_image = load_image(logo_path)
     logo_reduction_factor = 0.7
     scaled_logo_width = int(logo_image.get_width() * logo_reduction_factor)
@@ -123,7 +125,8 @@ def start_screen():
                         brightness_level = min(1.2, brightness_level + 0.01)
                     elif button_x_dim <= mouse_pos[0] <= button_x_dim + scaled_dim_button_width and button_y_dim <= mouse_pos[1] <= button_y_dim + scaled_dim_button_height:
                         print("Dim Button Clicked!")
-                        brightness_level = max(0.0, brightness_level - 0.01)
+                        if max(0.0, brightness_level - 0.01) > 1:
+                            brightness_level = max(0.0, brightness_level - 0.01)
 
         dt = clock.tick(60)
 

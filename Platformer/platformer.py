@@ -10,7 +10,7 @@ screenHeight = int(screenWidth * 0.8)
 screen = pygame.display.set_mode((screenWidth, screenHeight))
 pygame.display.set_caption("Platformer")
 
-prev_background = pygame.image.load('imgs/world/background.jpg').convert()
+prev_background = pygame.image.load('Platformer/imgs/world/background.jpg').convert()
 prev_background = pygame.transform.scale(prev_background, (screenWidth, screenHeight))
 backgroundWidth = prev_background.get_width()
 backgroundHeight = prev_background.get_height()
@@ -21,7 +21,8 @@ background = pygame.Surface((backgroundWidth, backgroundHeight))
 background.blit(prev_background, (0, 0))
 
 # Fill the bottom 50 pixels with black
-black_rect = pygame.Rect(0, backgroundHeight - 49, backgroundWidth, 49)
+if not start_screen():
+    black_rect = pygame.Rect(0, backgroundHeight - 49, backgroundWidth, 49)
 background.fill((0, 0, 0), black_rect)
 scale = 0.4
 ground_height = 50
@@ -53,9 +54,9 @@ class Combatant(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         self.type = type
         if self.type == 'player':
-            img = pygame.image.load('imgs/player/mainPlayer_Edit.png')
+            img = pygame.image.load('Platformer/imgs/player/mainPlayer_Edit.png')
         elif self.type == 'enemy':
-            img = pygame.image.load('imgs/world/Enemy.png')
+            img = pygame.image.load('Platformer/imgs/world/Enemy.png')
 
         self.image = pygame.transform.scale(img, (int(img.get_width() * scale), int(img.get_height() * scale)))
         self.rect = self.image.get_rect()
@@ -595,7 +596,7 @@ def createHoles(currentLevel):
 class Platform(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height, direction):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load('imgs/world/platform.png').convert_alpha()
+        self.image = pygame.image.load('Platformer/imgs/world/platform.png').convert_alpha()
         self.image = pygame.transform.scale(self.image, (width, height))
         self.rect = self.image.get_rect()
         self.rect.topleft = (x, y)
