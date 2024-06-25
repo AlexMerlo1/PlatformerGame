@@ -1,5 +1,6 @@
 import pygame
 import math
+from start_screen import start_screen  # Import the start screen
 
 pygame.init()
 clock = pygame.time.Clock()
@@ -9,7 +10,7 @@ screenHeight = int(screenWidth * 0.8)
 screen = pygame.display.set_mode((screenWidth, screenHeight))
 pygame.display.set_caption("Platformer")
 
-prev_background = pygame.image.load('Platformer/imgs/world/background.jpg').convert()
+prev_background = pygame.image.load('imgs/world/background.jpg').convert()
 prev_background = pygame.transform.scale(prev_background, (screenWidth, screenHeight))
 backgroundWidth = prev_background.get_width()
 backgroundHeight = prev_background.get_height()
@@ -52,9 +53,9 @@ class Combatant(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         self.type = type
         if self.type == 'player':
-            img = pygame.image.load('Platformer/imgs/player/mainPlayer_Edit.png')
+            img = pygame.image.load('imgs/player/mainPlayer_Edit.png')
         elif self.type == 'enemy':
-            img = pygame.image.load('Platformer/imgs/world/Enemy.png')
+            img = pygame.image.load('imgs/world/Enemy.png')
 
         self.image = pygame.transform.scale(img, (int(img.get_width() * scale), int(img.get_height() * scale)))
         self.rect = self.image.get_rect()
@@ -79,7 +80,7 @@ class Combatant(pygame.sprite.Sprite):
 
     def getCords(self):
         return self.rect.centerx - scroll, self.rect.centery
-    
+
     def draw(self):
         # Blit the current image to the screen at the current position
         screen.blit(self.image, self.rect.topleft)
@@ -139,7 +140,7 @@ class Combatant(pygame.sprite.Sprite):
             self.jumpsLeft = self.maxJumps
         if self.player_death():
             restart_level(player_died = True)
-            
+
         for platform in platforms:
             if platform.rect.colliderect(self.rect):
                 if self.velY > 0:  # Falling down
@@ -222,7 +223,7 @@ class Enemy(Combatant):
         self.detectionRange = 350
         self.shootCooldown = 2000  # Same as player
         self.jumpsLeft = 2
-        self.lastShot = pygame.time.get_ticks() 
+        self.lastShot = pygame.time.get_ticks()
         self.jumpCooldown = 1000
         self.last_jump_time = 0
         self.jumpSpeed = 22.5
@@ -253,7 +254,7 @@ class Enemy(Combatant):
             playerDetected = True
         else:
             playerDetected = False
-        
+
         if playerDetected:
             self.speed = 3.5  # Set a speed for chasing
             # Calculate direction to player
@@ -288,13 +289,13 @@ class Enemy(Combatant):
 
                 if self.on_raised_segment():
                     self.chase_and_attack(dirX, enemyCordsX, enemyCordsY)
-                    
+
                 elif self.is_on_ground_left() and playerCordsX <= enemyCordsX:
                     self.chase_and_attack(dirX, enemyCordsX, enemyCordsY)
 
                 elif self.is_on_ground_right() and playerCordsX >= enemyCordsX:
                     self.chase_and_attack(dirX, enemyCordsX, enemyCordsY)
-    
+
         else:
             self.speed = 3.5
             # Ensure enemy stays within bounds or turn around
@@ -305,10 +306,10 @@ class Enemy(Combatant):
                 self.direction *= -1
             if not on_ground_right:
                 self.direction *= -1
-            
+
             self.world_x += self.speed * self.direction
             self.rect.x = self.world_x
-            
+
         # Update the vertical position based on gravity and ground collisions
         self.velY += self.gravity
         self.world_y += self.velY
@@ -330,17 +331,17 @@ class Enemy(Combatant):
                         self.velY = 0
                         self.jumpsLeft = self.maxJumps
                         self.world_y = self.rect.y
-            
-            if segment_rect.collidepoint(self.rect.midleft):                
-                if not playerDetected: 
+
+            if segment_rect.collidepoint(self.rect.midleft):
+                if not playerDetected:
                     self.direction *= -1
                 self.rect.left = segment_rect.right
-                self.world_x = self.rect.left  
+                self.world_x = self.rect.left
             if segment_rect.collidepoint(self.rect.midright):
-                if not playerDetected: 
+                if not playerDetected:
                     self.direction *= -1
                 self.rect.right = segment_rect.left
-                self.world_x = self.rect.left  
+                self.world_x = self.rect.left
         on_ground = False
 
 
@@ -350,7 +351,7 @@ class Enemy(Combatant):
             enemies.remove(self)
         self.bullets.update()
         self.check_bullet_collisions()
-    
+
     def has_line_of_sight(self, player_x, player_y):
         return True
     def on_raised_segment(self):
@@ -366,10 +367,10 @@ class Enemy(Combatant):
             self.shoot()
 
     def isValidJump(self, world_x, world_y):
-        jumpHeight = 100  
+        jumpHeight = 100
         hypotenuseDistance = 75
 
-        # Check if there is a platform or raised segment directly above 
+        # Check if there is a platform or raised segment directly above
         rect_above = pygame.Rect(self.rect.x, self.rect.y - jumpHeight, self.rect.width, self.rect.height)
 
         for segment in raised_segments:
@@ -406,7 +407,7 @@ class Enemy(Combatant):
                 # Check if there are any obstacles between the enemy and raised segment
                 enemy_rect = pygame.Rect(world_x, world_y, self.rect.width, self.rect.height)
                 if not enemy_rect.colliderect(nearest_obstacle_rect):
-                    # Ensure the enemy is to the obstacle 
+                    # Ensure the enemy is to the obstacle
                     if abs(self.rect.y - nearest_obstacle_rect.top) <= jumpHeight:
                         return True
 
@@ -421,7 +422,7 @@ class Enemy(Combatant):
                 bullet.kill()
                 self.health -= 10
                 print(f'Enemy Health {self.health}')
-    
+
     def enemy_defeated(self):
         if self.health <= 0:
             self.kill()
@@ -477,7 +478,7 @@ class Enemy(Combatant):
                         self.rect.top = segment_rect.bottom
                         self.velY = 0
                         self.world_y = self.rect.y
-                        
+
         return False
     def shoot(self):
         current_time = pygame.time.get_ticks()
@@ -578,11 +579,11 @@ def createHoles(currentLevel):
 class Platform(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height, direction):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load('Platformer/imgs/world/platform.png').convert_alpha()
-        self.image = pygame.transform.scale(self.image, (width, height)) 
+        self.image = pygame.image.load('imgs/world/platform.png').convert_alpha()
+        self.image = pygame.transform.scale(self.image, (width, height))
         self.rect = self.image.get_rect()
         self.rect.topleft = (x, y)
-        self.fixed_x = x  
+        self.fixed_x = x
         self.direction = direction
 
     def draw(self):
@@ -646,7 +647,7 @@ def createRaisedGroundSegments(currentLevel):
         ]
 
         # Create raised segments from ground to top of screen
-        num_segments = screenHeight // ground_height  
+        num_segments = screenHeight // ground_height
         wall_width = 50
         # (x, Height, , wall width, how far down)
         wall_segments = [
@@ -690,7 +691,7 @@ def getLength(currentLevel):
     if currentLevel == 1:
         return 6000
 
-        
+
 currentLevel = 1
 
 # Call all level creation methods
@@ -716,9 +717,15 @@ player = Combatant(int(screenWidth * .47), screenHeight * 0.89, scale, 'player')
 enemy_bullets = pygame.sprite.Group()
 running = True
 game_frozen = False
+
+# Show the start screen
+if not start_screen():
+    pygame.quit()
+    exit()
+
 while running:
     clock.tick(50)
-    screen.fill((0, 0, 0)) 
+    screen.fill((0, 0, 0))
     drawBackground(scroll)
 
     scrollChange = 0
@@ -745,8 +752,6 @@ while running:
     if player.rect.x - scroll >= currentLevelLength:
         game_frozen = True
 
-
-
     # Update scroll based on player movement if not beyond the level length
     if scrollChange != 0 and not player.is_colliding_horizontally() and player.rect.x <= currentLevelLength:
         scroll -= scrollChange
@@ -760,7 +765,7 @@ while running:
     drawGround()
 
     for enemy in enemies:
-        if game_frozen == False:  
+        if game_frozen == False:
             enemy.update(player)
         enemy.draw()
 
