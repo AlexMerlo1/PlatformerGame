@@ -6,7 +6,7 @@ pygame.init()
 clock = pygame.time.Clock()
 screenWidth = 800
 screenHeight = int(screenWidth * 0.8)
-
+PLAYER_DIED = False
 screen = pygame.display.set_mode((screenWidth, screenHeight))
 pygame.display.set_caption("Platformer")
 
@@ -21,9 +21,7 @@ background = pygame.Surface((backgroundWidth, backgroundHeight))
 background.blit(prev_background, (0, 0))
 
 # Fill the bottom 50 pixels with black
-if not start_screen():
-    black_rect = pygame.Rect(0, backgroundHeight - 49, backgroundWidth, 49)
-background.fill((0, 0, 0), black_rect)
+
 scale = 0.4
 ground_height = 50
 
@@ -140,7 +138,7 @@ class Combatant(pygame.sprite.Sprite):
         if on_ground:
             self.jumpsLeft = self.maxJumps
         if self.player_death():
-            restart_level(player_died = True)
+            restart_level()
 
         for platform in platforms:
             if platform.rect.colliderect(self.rect):
@@ -200,11 +198,9 @@ class Combatant(pygame.sprite.Sprite):
     def player_death(self):
         if self.health <= 0:
             self.kill()
-            print('Player died')
             return True
         if self.rect.y >= screenHeight:
             self.kill()
-            print('Player died')
             return True
         return False
 
@@ -523,8 +519,8 @@ def start_game():
 def end_game():
     pass
 
-def restart_level(player_died):
-    if player_died == True:
+def restart_level():
+    if player.player_death() == True:
         return False # End game if Player dies
     else:
         return True
@@ -612,10 +608,12 @@ class Platform(pygame.sprite.Sprite):
         if self.direction == 'down':
             self.rect.y += moveSpeed
             if self.rect.y > screenHeight:
+                pygame.time.delay(500)
                 self.rect.y = 0
         elif self.direction == 'up':
             self.rect.y -= moveSpeed
             if self.rect.y < 0:
+                pygame.time.delay(500)
                 self.rect.y = screenHeight
         else:
             pass
@@ -623,7 +621,7 @@ class Platform(pygame.sprite.Sprite):
 def create_platforms(current_level):
     if currentLevel == 1:
         platforms = [
-            Platform(650, screenHeight - 200, 100, 20, 'none'),
+            Platform(675, screenHeight - 200, 100, 20, 'none'),
             Platform(2250, screenHeight - ground_height - 325, 100, 20, 'none'),
 
 
@@ -729,16 +727,22 @@ platforms = create_platforms(currentLevel)
 scroll = 0
 
 # Create the main player
-player = Combatant(int(screenWidth * .47), screenHeight * 0.89, scale, 'player')
+if currentLevel == 1:
+    spawnX = int(screenWidth * .47)
+    spawnY = int(screenHeight * 0.89)
+player = Combatant(spawnX, spawnY, scale, 'player')
 enemy_bullets = pygame.sprite.Group()
 running = True
 game_frozen = False
-
+if PLAYER_DIED == True:
+    game_frozen = True
 # Show the start screen
 if not start_screen():
     pygame.quit()
     exit()
-
+if running:
+    black_rect = pygame.Rect(0, backgroundHeight - 49, backgroundWidth, 49)
+background.fill((0, 0, 0), black_rect)
 while running:
     clock.tick(50)
     screen.fill((0, 0, 0))

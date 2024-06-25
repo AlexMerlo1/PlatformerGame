@@ -25,8 +25,8 @@ dim_button = load_image("Platformer/imgs/startscreen/dim_button.png")
 
 # Set scaling factors for images
 logo_reduction_factor = 0.04
-scaled_logo_width = int(game_logo.get_width() * logo_reduction_factor)
-scaled_logo_height = int(game_logo.get_height() * logo_reduction_factor)
+scaled_logo_width = int(WIDTH * logo_reduction_factor)
+scaled_logo_height = int(HEIGHT * logo_reduction_factor)
 logo_x = (WIDTH - scaled_logo_width) // 2
 logo_y = 20
 
@@ -79,7 +79,6 @@ brightness_level = 1.0  # Initialize brightness level
 
 # Function to adjust brightness
 def apply_brightness(surface, level):
-    print(level)
     if level > 1:
         brightness_surface = pygame.Surface(surface.get_size()).convert_alpha()
         brightness_surface.fill((255, 255, 255, int(255 * (level - 1))))
@@ -145,7 +144,7 @@ def start_screen():
         screen.blit(background_surface, (0, 0))
 
         if not second_page_active:
-            screen.blit(pygame.transform.scale(game_logo, (scaled_logo_width, scaled_logo_height)), (logo_x, logo_y))
+            screen.blit(pygame.transform.scale(game_logo, (WIDTH // 2, WIDTH // 2)), (WIDTH // 4, logo_y))
             screen.blit(pygame.transform.scale(start_button, (scaled_start_button_width, scaled_start_button_height)), (button_x_start, button_y))
             screen.blit(pygame.transform.scale(options_button, (scaled_options_button_width, scaled_options_button_height)), (button_x_options, button_y_options))
         else:
