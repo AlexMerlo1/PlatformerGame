@@ -26,6 +26,13 @@ background.blit(prev_background, (0, 0))
 scale = 0.4
 ground_height = 50
 
+jump_sound = pygame.mixer.Sound("soundEffects/jump.mp3")
+player_hit_sound = pygame.mixer.Sound("soundEffects/PlayerHit.mp3")
+game_over_sound = pygame.mixer.Sound("soundEffects/gameOver.mp3")
+bullet_sound = pygame.mixer.Sound("soundEffects/bullet.wav")
+level_completed_sound = pygame.mixer.Sound("soundEffects/levelCompleted.mp3")
+
+
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y, direction):
         pygame.sprite.Sprite.__init__(self)
@@ -107,6 +114,8 @@ class Combatant(pygame.sprite.Sprite):
         if self.jumpsLeft > 0:
             self.velY = -self.jumpSpeed
             self.jumpsLeft -= 1
+            if self.type == "player":
+                jump_sound.play()
 
     def update(self):
         # Apply gravity
@@ -184,6 +193,8 @@ class Combatant(pygame.sprite.Sprite):
             bullet = Bullet(self.rect.centerx, self.rect.centery, self.direction)
             self.bullets.add(bullet)
             self.lastShot = current_time
+            if self.type == "player":
+                bullet_sound.play()
 
     def check_bullet_collisions(self):
         for enemy in enemies:
@@ -192,6 +203,7 @@ class Combatant(pygame.sprite.Sprite):
                 if bullet.rect.colliderect(player.rect):
                     bullet.kill()
                     print(f'{self.type.capitalize()} hit!')
+                    player_hit_sound.play()
                     self.health -= 10
                     print(f'Player Health {self.health}')
 
@@ -204,6 +216,7 @@ class Combatant(pygame.sprite.Sprite):
 
     def attack(self):
         self.shoot()  # Filler for attack logic
+        
 
 # Create the enemy class
 class Enemy(Combatant):
@@ -797,9 +810,6 @@ while running:
             player.jump()
         if keys[pygame.K_SPACE]:
             player.attack()
-        if keys[pygame.K_0]:
-            x, y = player.getCords()
-            print(x, round((screenHeight - ground_height - y) / 50) * 50)
 
     if player.rect.x - scroll >= currentLevelLength + 50:
         game_frozen = True
